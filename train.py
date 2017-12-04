@@ -70,7 +70,7 @@ for epoch in range(training_epochs):
 
     for i in range(total_batch):
         batch_xs, batch_ys = load_data.get_braille()
-        feed_dict = {X: batch_xs, Y: batch_ys, keep_prob: 0.7}
+        feed_dict = {X: batch_xs, Y: batch_ys, keep_prob: 0.7, training: True}
         plt.imshow(batch_xs[284],cmap="gray")
         plt.show()
 
