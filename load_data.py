@@ -51,9 +51,9 @@ def get_braille(get_size=None):
             braille_data_index.append(one_hot_map)
 
         index += 1
-    print(len(braille_data) == len(braille_data_index))
-    print(np.array(braille_data).shape)
-    print(np.array(braille_data_index).shape)
+    # print(len(braille_data) == len(braille_data_index))
+    # print(np.array(braille_data).shape)
+    # print(np.array(braille_data_index).shape)
     return np.array(braille_data), np.array(braille_data_index)
 
 def get_test_braille(get_image=False, get_label=False):

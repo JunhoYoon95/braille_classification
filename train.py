@@ -12,7 +12,7 @@ batch_size = 100
 
 X = tf.placeholder(tf.float32)
 X_img = tf.reshape(X, [-1, 28, 28, 1])   # img 28x28x1 (black/white)
-Y = tf.placeholder(tf.string, [None, 26])
+Y = tf.placeholder(tf.float64, [None, 26])
 print(Y)
 training = tf.placeholder(tf.bool)
 
@@ -64,24 +64,23 @@ sess.run(tf.global_variables_initializer())
 
 # train my model
 print('Learning started. It takes sometime.')
-# batch_xs, batch_ys = load_data.get_braille()
-batch_xs = cv2.imread("Braille/character12/0203_15.png", 0)
-batch_ys = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]])
-print(batch_ys)
+
 for epoch in range(training_epochs):
     avg_cost = 0
     total_batch = 520
 
     for i in range(total_batch):
+        batch_xs, batch_ys = load_data.get_braille()
         feed_dict = {X: batch_xs, Y: batch_ys, training: True}
         # plt.imshow(batch_xs[284],cmap="gray")
         # plt.show()
 
 
         # print(sess.run([cost, optimizer], feed_dict=feed_dict))
-        x = sess.run([cost, optimizer], feed_dict=feed_dict)
-        # avg_cost += c / total_batch
-        print(x)
+        c, _ = sess.run([cost, optimizer], feed_dict=feed_dict)
+        avg_cost += c / total_batch
+        print('Epoch:', '%04d of ' % (epoch + 1), '%04d' % (i + 1),  'cost =', '{:.9f}'.format(avg_cost))
+
 
     print('Epoch:', '%04d' % (epoch + 1), 'cost =', '{:.9f}'.format(avg_cost))
 
@@ -94,7 +93,7 @@ print('Learning Finished!')
 correct_prediction = tf.equal(tf.argmax(logits, 1), tf.argmax(Y, 1))
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 print('Accuracy:', sess.run(accuracy, feed_dict={
-      X: load_data.get_test_braille(get_image=True), Y: load_data.get_test_braille(get_label=True), keep_prob: 1}))
+      X: load_data.get_test_braille(get_image=True), Y: load_data.get_test_braille(get_label=True)}))
 #
 # # Get one and predict
 # r = random.randint(0, load_data.get_braille(get_size=True))
