@@ -3,6 +3,7 @@ import numpy as np
 import load_data
 import random
 import matplotlib.pyplot as plt
+import cv2
 
 learning_rate = 0.001
 training_epochs = 15
@@ -12,8 +13,8 @@ batch_size = 100
 X = tf.placeholder(tf.float32)
 X_img = tf.reshape(X, [-1, 28, 28, 1])   # img 28x28x1 (black/white)
 Y = tf.placeholder(tf.string, [None, 26])
+print(Y)
 training = tf.placeholder(tf.bool)
-keep_prob = tf.placeholder(tf.float32)
 
 conv1 = tf.layers.conv2d(inputs=X_img, filters=32,
                             padding='SAME', kernel_size=[3, 3],
@@ -49,9 +50,8 @@ flat = tf.reshape(dropout3, [-1, 128 * 4 * 4])
 
 dense4 = tf.layers.dense(inputs=flat,
                         units=625, activation=tf.nn.relu)
-dropout4 = tf.layers.dropout(inputs=dense4,
-                            rate=0.5, training=training)
-logits = tf.layers.dense(inputs=dropout4, units=10)
+
+logits = tf.layers.dense(inputs=dense4, units=26)
 
 # define cost/loss & optimizer
 cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
@@ -64,19 +64,23 @@ sess.run(tf.global_variables_initializer())
 
 # train my model
 print('Learning started. It takes sometime.')
+# batch_xs, batch_ys = load_data.get_braille()
+batch_xs = cv2.imread("Braille/character12/0203_15.png", 0)
+batch_ys = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]])
+print(batch_ys)
 for epoch in range(training_epochs):
     avg_cost = 0
     total_batch = 520
 
     for i in range(total_batch):
-        batch_xs, batch_ys = load_data.get_braille()
-        feed_dict = {X: batch_xs, Y: batch_ys, keep_prob: 0.7}
-        plt.imshow(batch_xs[284],cmap="gray")
-        plt.show()
+        feed_dict = {X: batch_xs, Y: batch_ys, training: True}
+        # plt.imshow(batch_xs[284],cmap="gray")
+        # plt.show()
 
         # print(sess.run([cost, optimizer], feed_dict=feed_dict))
-        c, _ = sess.run([cost, optimizer], feed_dict=feed_dict)
-        avg_cost += c / total_batch
+        x = sess.run([cost, optimizer], feed_dict=feed_dict)
+        # avg_cost += c / total_batch
+        print(x)
 
     print('Epoch:', '%04d' % (epoch + 1), 'cost =', '{:.9f}'.format(avg_cost))
 

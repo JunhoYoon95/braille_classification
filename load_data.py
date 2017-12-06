@@ -45,14 +45,16 @@ def get_braille(get_size=None):
                                                                   str(file_index + j).zfill(4),
                                                                   str(k).zfill(2))
             image = cv2.imread(file_path, 0)
-            np.reshape(image, (28, 28, 1))
             braille_data.append(image)
             # one_hot_map = list(pad([0], 26, 0))
             one_hot_map[index] = 1
             braille_data_index.append(one_hot_map)
 
         index += 1
-    return braille_data, braille_data_index
+    print(len(braille_data) == len(braille_data_index))
+    print(np.array(braille_data).shape)
+    print(np.array(braille_data_index).shape)
+    return np.array(braille_data), np.array(braille_data_index)
 
 def get_test_braille(get_image=False, get_label=False):
     _x, _y = get_braille()
@@ -68,5 +70,4 @@ def get_test_braille(get_image=False, get_label=False):
 
 
 _x, _y = get_braille()
-print(_x)
 
