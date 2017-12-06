@@ -77,6 +77,7 @@ for epoch in range(training_epochs):
         # plt.imshow(batch_xs[284],cmap="gray")
         # plt.show()
 
+
         # print(sess.run([cost, optimizer], feed_dict=feed_dict))
         x = sess.run([cost, optimizer], feed_dict=feed_dict)
         # avg_cost += c / total_batch
