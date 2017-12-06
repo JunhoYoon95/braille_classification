@@ -50,8 +50,10 @@ flat = tf.reshape(dropout3, [-1, 128 * 4 * 4])
 
 dense4 = tf.layers.dense(inputs=flat,
                         units=625, activation=tf.nn.relu)
+dropout4 = tf.layers.dropout(inputs=dense4,
+                            rate=0.5, training=training)
 
-logits = tf.layers.dense(inputs=dense4, units=26)
+logits = tf.layers.dense(inputs=dropout4, units=26)
 
 # define cost/loss & optimizer
 cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
@@ -72,31 +74,20 @@ for epoch in range(training_epochs):
     for i in range(total_batch):
         batch_xs, batch_ys = load_data.get_braille()
         feed_dict = {X: batch_xs, Y: batch_ys, training: True}
-        # plt.imshow(batch_xs[284],cmap="gray")
-        # plt.show()
-
-
-        # print(sess.run([cost, optimizer], feed_dict=feed_dict))
         c, _ = sess.run([cost, optimizer], feed_dict=feed_dict)
         avg_cost += c / total_batch
         print('Epoch:', '%04d of ' % (epoch + 1), '%04d' % (i + 1),  'cost =', '{:.9f}'.format(avg_cost))
 
 
+    print()
     print('Epoch:', '%04d' % (epoch + 1), 'cost =', '{:.9f}'.format(avg_cost))
+    print()
 
 print('Learning Finished!')
-
-# Test model and check accuracy
-
-# if you have a OOM error, please refer to lab-11-X-mnist_deep_cnn_low_memory.py
 
 correct_prediction = tf.equal(tf.argmax(logits, 1), tf.argmax(Y, 1))
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 print('Accuracy:', sess.run(accuracy, feed_dict={
       X: load_data.get_test_braille(get_image=True), Y: load_data.get_test_braille(get_label=True)}))
-#
-# # Get one and predict
-# r = random.randint(0, load_data.get_braille(get_size=True))
-# print("Label: ", sess.run(tf.argmax(mnist.test.labels[r:r + 1], 1)))
-# print("Prediction: ", sess.run(
-#     tf.argmax(logits, 1), feed_dict={X: mnist.test.images[r:r + 1], keep_prob: 1}))
+
+
