@@ -1,0 +1,175 @@
+<html>
+<head><title>MNIST Tester</title></head>
+<style>
+	#number-pad {
+		padding: 0;
+		margin: 0;
+		border-collapse: collapse;
+		border: 1px solid #000;
+	}
+	#number-pad tr {
+		margin: 0;
+		padding: 0;
+		height: 10px;
+	}
+	#number-pad tr td {
+		margin: 0;
+		padding: 0;
+		width: 10px;
+	}
+	.selected {
+		background: #000;
+	}
+</style>
+<script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+<script>
+	var rules = "";
+	for(var i = 0; i <= 255; i++) {
+		var color = (255 - i).toString(16)
+		color = color + color + color
+		rules += 'td[data-amount="' + i + '"]{background:#' + color + '}'
+	}
+	var st = document.createElement('style')
+	st.innerText = rules
+	document.head.appendChild(st)
+
+	$(function() {
+		var mousedown = false
+		var changed = false
+		var $tds = $("#number-pad td")
+		var lastRow = -1, lastCol = -1
+
+		function applyNear(row, col) {
+			if(row > 0) {
+				var $top = $tds.eq((row - 1) * 28 + col)
+				$top.attr('data-amount', Math.min((($top.attr('data-amount') || 0)|0) + 5, 255))
+			}
+			if(col > 0) {
+				var $left = $tds.eq(row * 28 + (col - 1))
+				$left.attr('data-amount', Math.min((($left.attr('data-amount') || 0)|0) + 5, 255))
+			}
+			if(row < 27) {
+				var $bottom = $tds.eq((row + 1) * 28 + col)
+				$bottom.attr('data-amount', Math.min((($bottom.attr('data-amount') || 0)|0) + 5, 255))
+			}
+			if(col < 27) {
+				var $right = $tds.eq(row * 28 + (col + 1))
+				$right.attr('data-amount', Math.min((($right.attr('data-amount') || 0)|0) + 5, 255))
+			}
+		}
+
+		darkerTimer = 0
+		$tds.mouseenter(function() {
+			if(!mousedown) {
+				$(this).css('background', '#aaa');
+			} else {
+				var idx = $tds.index(this)
+				var row = idx / 28 |0, col = idx % 28
+
+				var $toSet = $(this)
+				var updated = [[row, col]]
+
+				if(lastRow >= 0 && lastCol >= 0) {
+					var dr = row - lastRow, dc = col - lastCol
+					var set = {}
+					for(var r = lastRow; r < row; r++) {
+						var c = Math.round(lastCol + dc * (r - lastRow) / dr)
+						set[r * 28 + c] = true
+					}
+					for(var c = lastCol; c < col; c++) {
+						var r = Math.round(lastRow + dr * (c - lastCol) / dc)
+						set[r * 28 + c] = true
+					}
+					for(var key in set) {
+						if(set.hasOwnProperty(key)) {
+							$toSet = $toSet.add($tds.eq(key|0))
+							updated.push([key / 28 | 0, key % 28])
+						}
+					}
+				}
+
+				$toSet.attr('data-amount', 255)
+				console.log(JSON.stringify(updated), $toSet)
+
+				applyNear(row, col)
+				darkerTimer = setInterval(function() {applyNear(row, col)}, 50)
+
+				changed = true
+				lastRow = row
+				lastCol = col
+			}
+		}).mouseleave(function() {
+			$(this).css('background', '');
+			clearInterval(darkerTimer)
+			darkerTimer = 0
+		})
+
+		$tds.add("#number-pad").mousedown(function() {
+			mousedown = true
+			lastRow = -1
+			lastCol = -1
+
+			$("#result").text("Result: ...")
+			$(this).mouseenter()
+			return false
+		})
+		$('body').mouseup(function() {
+			mousedown = false
+		})
+
+		$("#reset").click(function() {
+			$("[data-amount]").attr('data-amount', '')
+			$("#result").text("")
+		})
+
+		setInterval(function() {
+			if(!mousedown && changed) {
+				var amounts = Array.prototype.join.call($tds.map(function() {
+					return (($(this).attr('data-amount') || 0)|0).toString(16)
+				}), ',')
+				//console.log(amounts)
+				$.post('./determine', {'amounts': amounts}, function(data) {
+					$("#result").text("Result: " + data);
+				})
+				changed = false
+			}
+		}, 1000)
+	})
+</script>
+<body>
+	<table id="number-pad">
+		<!-- 28 * 28 matrix, ouch -->
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+  </table>
+
+	<button id="reset">Reset</button>
+	<div id="result"></div>
+</body>
+</html>
