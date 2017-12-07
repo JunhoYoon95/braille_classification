@@ -71,8 +71,5 @@ def get_test_braille(get_image=False, get_label=False):
     return _x[random.randint(0, 520)], _y[random.randint(0, 520)]
 
 
-_x, _y = get_braille()
-plt.imshow(_x[110])
-plt.show()
-print(_x[110])
+
 
