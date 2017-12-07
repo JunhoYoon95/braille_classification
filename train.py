@@ -1,24 +1,32 @@
 import tensorflow as tf
-import numpy as np
-import load_data
-from datetime import datetime
 import random
-import matplotlib.pyplot as plt
-import cv2
+# import matplotlib.pyplot as plt
+import os
+import load_data
 
+tf.set_random_seed(777)  # reproducibility
+
+# parameters
 learning_rate = 0.001
-training_epochs = 15
+training_epochs = 5
 batch_size = 100
 
+CHECK_POINT_DIR = TB_SUMMARY_DIR = './logs'
 
+
+# input place holders
 X = tf.placeholder(tf.float32)
+Y = tf.placeholder(tf.float32, [None, 26])
+# Image input
 X_img = tf.reshape(X, [-1, 28, 28, 1])   # img 28x28x1 (black/white)
-Y = tf.placeholder(tf.float64, [None, 26])
+tf.summary.image('input', X_img, 3)
+
+# dropout (keep_prob) rate  0.7~0.5 on training, but should be 1 for testing
 training = tf.placeholder(tf.bool)
 
-global_step = tf.Variable(0, trainable=False, name='global_step')
-
-with tf.name_scope('layer1'):
+# weights & bias for nn layers
+# http://stackoverflow.com/questions/33640581/how-to-do-xavier-initialization-on-tensorflow
+with tf.variable_scope('layer1'):
     conv1 = tf.layers.conv2d(inputs=X_img, filters=32,
                              padding='SAME', kernel_size=[3, 3],
                              activation=tf.nn.relu,
@@ -30,7 +38,7 @@ with tf.name_scope('layer1'):
     dropout1 = tf.layers.dropout(inputs=pool1,
                                  rate=0.7, training=training)
 
-with tf.name_scope('layer2'):
+with tf.variable_scope('layer2'):
     conv2 = tf.layers.conv2d(inputs=dropout1, filters=64, kernel_size=[3, 3],
                              padding="SAME", activation=tf.nn.relu,
                              kernel_initializer=tf.contrib.layers.xavier_initializer())
@@ -41,8 +49,7 @@ with tf.name_scope('layer2'):
     dropout2 = tf.layers.dropout(inputs=pool2,
                                  rate=0.7, training=training)
 
-
-with tf.name_scope('layer3'):
+with tf.variable_scope('layer3'):
     conv3 = tf.layers.conv2d(inputs=dropout2, filters=128, kernel_size=[3, 3],
                              padding="same", activation=tf.nn.relu,
                              kernel_initializer=tf.contrib.layers.xavier_initializer())
@@ -53,7 +60,7 @@ with tf.name_scope('layer3'):
     dropout3 = tf.layers.dropout(inputs=pool3,
                                  rate=0.7, training=training)
 
-with tf.name_scope('dense1'):
+with tf.variable_scope('layer4'):
     flat = tf.reshape(dropout3, [-1, 128 * 4 * 4])
 
     dense4 = tf.layers.dense(inputs=flat,
@@ -71,55 +78,68 @@ with tf.name_scope('optimizer'):
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
 
+# define cost/loss & optimizer
+cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
+    logits=logits, labels=Y))
+optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
+
+tf.summary.scalar("loss", cost)
+
+last_epoch = tf.Variable(0, name='last_epoch')
+
+# Summary
+summary = tf.summary.merge_all()
 
 # initialize
 sess = tf.Session()
-saver = tf.train.Saver(tf.global_variables())
+sess.run(tf.global_variables_initializer())
 
-ckpt = tf.train.get_checkpoint_state('./model')
-if ckpt and tf.train.checkpoint_exists(ckpt.model_checkpoint_path):
-    saver.restore(sess, ckpt.model_checkpoint_path)
+# Create summary writer
+writer = tf.summary.FileWriter(TB_SUMMARY_DIR)
+writer.add_graph(sess.graph)
+global_step = 0
+
+# Saver and Restore
+saver = tf.train.Saver()
+checkpoint = tf.train.get_checkpoint_state(CHECK_POINT_DIR)
+
+if checkpoint and checkpoint.model_checkpoint_path:
+    try:
+        saver.restore(sess, checkpoint.model_checkpoint_path)
+        print("Successfully loaded:", checkpoint.model_checkpoint_path)
+    except:
+        print("Error on loading old network weights")
 else:
-    sess.run(tf.global_variables_initializer())
+    print("Could not find old network weights")
 
-merged = tf.summary.merge_all()
-writer = tf.summary.FileWriter('./logs', sess.graph)
+start_from = sess.run(last_epoch)
 
 # train my model
-print('Learning started. It takes sometime.')
+print('Start learning from:', start_from)
 
-for epoch in range(training_epochs):
+for epoch in range(start_from, training_epochs):
+    print('Start Epoch:', epoch)
+
     avg_cost = 0
     total_batch = 520
 
     for i in range(total_batch):
         batch_xs, batch_ys = load_data.get_braille()
         feed_dict = {X: batch_xs, Y: batch_ys, training: True}
-        c, _ = sess.run([cost, optimizer], feed_dict=feed_dict)
-        avg_cost += c / total_batch
-        print('Epoch:', '%04d of ' % (epoch + 1), '%04d' % (i + 1),  'cost =', '{:.9f}'.format(avg_cost))
+        s, _ = sess.run([summary, optimizer], feed_dict=feed_dict)
+        writer.add_summary(s, global_step=global_step)
+        global_step += 1
 
-    sess.run(global_step)
-    summary = sess.run(merged, feed_dict={X: batch_xs, Y: batch_ys})
-    writer.add_summary(summary, global_step=sess.run(global_step))
+        avg_cost += sess.run(cost, feed_dict=feed_dict) / total_batch
+        print('Epoch:', '%04d of ' % (epoch + 1), '%04d' % (i + 1), 'cost =', '{:.9f}'.format(avg_cost))
 
-    file_name = './model/' + str(datetime.today().year) + '-' + str(datetime.today().month) + '-' + str(
-        datetime.today().day) + '-' + str(datetime.today().hour) + '-tbd.ckpt'
-    print(file_name)
-    saver.save(sess, file_name, global_step=global_step)
 
-    print()
     print('Epoch:', '%04d' % (epoch + 1), 'cost =', '{:.9f}'.format(avg_cost))
-    print()
+
+    print("Saving network...")
+    sess.run(last_epoch.assign(epoch + 1))
+    if not os.path.exists(CHECK_POINT_DIR):
+        os.makedirs(CHECK_POINT_DIR)
+    saver.save(sess, CHECK_POINT_DIR + "/model", global_step=i)
 
 print('Learning Finished!')
-file_name = './model/' + str(datetime.today().year) + '-' + str(datetime.today().month) + '-' + str(datetime.today().day) + '-' + str(datetime.today().hour) +'-tbd.ckpt'
-print(file_name)
-saver.save(sess, file_name, global_step=global_step)
-
-correct_prediction = tf.equal(tf.argmax(logits, 1), tf.argmax(Y, 1))
-accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-print('Accuracy:', sess.run(accuracy, feed_dict={
-      X: load_data.get_test_braille(get_image=True), Y: load_data.get_test_braille(get_label=True)}))
-
-

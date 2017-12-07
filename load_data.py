@@ -45,6 +45,8 @@ def get_braille(get_size=None):
                                                                   str(file_index + j).zfill(4),
                                                                   str(k).zfill(2))
             image = cv2.imread(file_path, 0)
+            image_norm = np.full((28, 28), 255)
+            image = np.divide(image, image_norm)
             braille_data.append(image)
             # one_hot_map = list(pad([0], 26, 0))
             one_hot_map[index] = 1
@@ -70,4 +72,7 @@ def get_test_braille(get_image=False, get_label=False):
 
 
 _x, _y = get_braille()
+plt.imshow(_x[110])
+plt.show()
+print(_x[110])
 
