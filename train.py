@@ -1,6 +1,6 @@
 import tensorflow as tf
 import random
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import os
 import load_data
 
@@ -104,6 +104,7 @@ saver = tf.train.Saver()
 checkpoint = tf.train.get_checkpoint_state(CHECK_POINT_DIR)
 
 if checkpoint and checkpoint.model_checkpoint_path:
+    print(checkpoint)
     try:
         saver.restore(sess, checkpoint.model_checkpoint_path)
         print("Successfully loaded:", checkpoint.model_checkpoint_path)
@@ -143,3 +144,29 @@ for epoch in range(start_from, training_epochs):
     saver.save(sess, CHECK_POINT_DIR + "/model", global_step=i)
 
 print('Learning Finished!')
+r = random.randint(0, load_data.get_braille(get_size=True))
+batch_xs, batch_ys = load_data.get_braille()
+predict_label = [batch_ys[r]]
+predict_data = [batch_xs[r]]
+
+
+# Test model and check accuracy
+correct_prediction = tf.equal(tf.argmax(logits, 1), tf.argmax(Y, 1))
+accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+print('Accuracy:', sess.run(accuracy, feed_dict={
+    X: predict_data,
+    Y: predict_label, training: False}))
+
+# Get one and predict
+
+# predict = load_data.get_test_braille(batch=[r, r+1])
+#
+# #casting
+# _, predict_label = predict
+# predict_data, _ = predict
+
+
+print("Label: ", chr(64 + sess.run(tf.argmax(predict_label[0], 0,)) + 1))
+print("Prediction: ", chr(64 + sess.run(tf.argmax(logits, 1), feed_dict={X:predict_data, training:False}) + 1))
+plt.imshow(predict_data[0], cmap='Greys')
+plt.show()
