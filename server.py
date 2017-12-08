@@ -1,5 +1,5 @@
 import tensorflow as tf
-import numpy as numpy
+import numpy as np
 import matplotlib.pyplot as pyplot
 from flask import Flask, Response, request
 
@@ -7,12 +7,13 @@ app = Flask(__name__)
 
 @app.route('/')
 def page():
-    with open('main.html', 'r', encoding='utf8') as f:
+    with open('C:/Users/ML-10301/Documents/GitHub/braille_classification/index.html', 'r', encoding='utf8') as f:
         return f.read()
 
 sess = tf.InteractiveSession()
 
 def setup_net():
+
     X = tf.placeholder(tf.float32)
     X_img = tf.reshape(X, [-1, 28, 28, 1])
 
@@ -48,9 +49,27 @@ def setup_net():
 
     result = tf.argmax(logits, 1)
 
-    saver = tf.train.Saver()
+
 
     with tf.Session() as sess:
-        # Restore variables from disk.
-        saver.restore(sess, "/tmp/model.ckpt")
-        print("Model restored.")
+        # saver = tf.train.Saver()
+        sess.run(tf.global_variables_initializer())
+        saver = tf.train.import_meta_graph('C:/Users/ML-10301/Documents/GitHub/braille_classification/logs/model-519.meta')
+        saver.restore(sess, "C:/Users/ML-10301/Documents/GitHub/braille_classification/logs/model-519")
+        print(saver.restore(sess, "C:/Users/ML-10301/Documents/GitHub/braille_classification/logs/model-519")
+)
+    return X, result
+
+x, result = setup_net()
+
+@app.route('/determine', methods=['POST'])
+def determine():
+    global x
+    amts = [int(x, 16) / 255 for x in request.form['amounts'].split(',')]
+    pyplot.imshow(np.array(amts).reshape((28, 28)))
+    pyplot.show()
+    res = sess.run(result, feed_dict={x: [amts]})
+    return str(res[0])
+
+if __name__ == '__main__':
+    app.run(host='localhost', debug=True)
