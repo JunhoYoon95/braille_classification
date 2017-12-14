@@ -21,10 +21,8 @@ Y = tf.placeholder(tf.float32, [None, 26])
 X_img = tf.reshape(X, [-1, 28, 28, 1])   # img 28x28x1 (black/white)
 tf.summary.image('input', X_img, 3)
 
-# dropout (keep_prob) rate  0.7~0.5 on training, but should be 1 for testing
 training = tf.placeholder(tf.bool)
 
-# weights & bias for nn layers
 # http://stackoverflow.com/questions/33640581/how-to-do-xavier-initialization-on-tensorflow
 with tf.variable_scope('layer1'):
     conv1 = tf.layers.conv2d(inputs=X_img, filters=32,
@@ -149,7 +147,7 @@ batch_xs, batch_ys = load_data.get_braille()
 predict_label = [batch_ys[r]]
 predict_data = [batch_xs[r]]
 
-
+us
 # Test model and check accuracy
 correct_prediction = tf.equal(tf.argmax(logits, 1), tf.argmax(Y, 1))
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
