@@ -25,7 +25,7 @@ class InputError(Error):
     def __init__(self, message):
         self.message = message
 
-def get_braille(get_size=None):
+def get_braille(get_size=None, batch=None):
     braille_data = []
     braille_data_index = []
 
@@ -37,8 +37,7 @@ def get_braille(get_size=None):
     # index = 64
     index = 0
     for j in range(1, 27):
-        one_hot_map = [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-                       0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,0., 0.]
+        one_hot_map = [0 for i in range(0, 26)]
 
         for k in range(1, 21):
             file_path = "Braille/character{0}/{1}_{2}.png".format(str(j).zfill(2),
@@ -56,19 +55,38 @@ def get_braille(get_size=None):
     # print(len(braille_data) == len(braille_data_index))
     # print(np.array(braille_data).shape)
     # print(np.array(braille_data_index).shape)
+    if batch != None:
+        try:
+            start_index = batch[0]
+            end_index = batch[1]
+
+            return np.array(braille_data[start_index:end_index]), np.array(braille_data_index[start_index:end_index])
+        except IndexError as I:
+            print(I)
+        except:
+            if issubclass(type(batch), tuple or list or str) != True:
+                raise InputError("param : batch is nor Tuple or List or Str")
+
+
+
     return np.array(braille_data), np.array(braille_data_index)
 
-def get_test_braille(get_image=False, get_label=False):
+def get_test_braille(get_image=False, get_label=False, batch=None):
     _x, _y = get_braille()
+
     if get_image ^ get_label:
         if get_image == True:
-            return _x[random.randint(0, 520)]
+            return [_x[random.randint(0, 520)]]
         elif get_label == True:
-            return _y[random.randint(0, 520)]
+            return [_y[random.randint(0, 520)]]
     else:
         raise InputError("Only one parameter should be true")
 
-    return _x[random.randint(0, 520)], _y[random.randint(0, 520)]
+    if batch != None:
+        _x, _y = get_braille(batch=batch)
+        return [_x], [_y]
+
+    return [_x[random.randint(0, 520)]], [_y[random.randint(0, 520)]]
 
 
 
